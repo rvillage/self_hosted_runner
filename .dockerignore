@@ -1,0 +1,8 @@
+/.deploy
+/.git
+/.github
+/images
+
+/docker-compose.yml*
+/Dockerfile
+/README.md

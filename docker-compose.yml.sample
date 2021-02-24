@@ -1,0 +1,16 @@
+version: "3.8"
+
+services:
+
+  runner:
+    image: local/runner
+    container_name: self_hosted_runner
+    environment:
+      - REPOSITORY_NAME=xxx/xxx
+      - RUNNER_TOKEN=xxx
+      # ローカル実行
+      # - LOCAL_MODE=enable
+      # - GITHUB_ACCESS_TOKEN=xxx
+    command: ["./start-runner.sh"]
+    init: true
+    privileged: true

@@ -1,0 +1,166 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+
+  Name: { Type: String, Default: SelfHostedRunner }
+
+Resources:
+
+#-------------------------------------------------------------------------------
+# IAM Role
+#-------------------------------------------------------------------------------
+
+  CodeBuildExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: CodeBuildExecutionRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ["codebuild.amazonaws.com"] }
+            Action: ["sts:AssumeRole"]
+      Policies:
+        - PolicyName: CodeBuildExecutionBasePolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub "arn:aws:logs:ap-northeast-1:${AWS::AccountId}:log-group:/codebuild/${Name}"
+                  - !Sub "arn:aws:logs:ap-northeast-1:${AWS::AccountId}:log-group:/codebuild/${Name}:*"
+              - Effect: Allow
+                Action:
+                  - codebuild:CreateReportGroup
+                  - codebuild:CreateReport
+                  - codebuild:UpdateReport
+                  - codebuild:BatchPutTestCases
+                  - codebuild:BatchPutCodeCoverages
+                Resource:
+                  - !Sub "arn:aws:codebuild:ap-northeast-1:${AWS::AccountId}:report-group/${Name}-*"
+      Tags:
+        - { Key: Name, Value: !Sub "${Name}-CodeBuildExecutionRole" }
+        - { Key: Project, Value: !Ref "Name" }
+
+  GitHubActionsUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: github-actions-user
+      Policies:
+        - PolicyName: CodeBuildPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - codebuild:StartBuild
+                Resource:
+                  - !Sub "arn:aws:codebuild:ap-northeast-1:${AWS::AccountId}:project/${Name}"
+      Tags:
+        - { Key: Name, Value: !Sub "${Name}-GitHubActionsUser" }
+        - { Key: Project, Value: !Ref "Name" }
+
+#-------------------------------------------------------------------------------
+# CodeBuild
+#-------------------------------------------------------------------------------
+
+  CodeBuild:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Ref "Name"
+      ServiceRole: !GetAtt CodeBuildExecutionRole.Arn
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: ${AWS::AccountId}.dkr.ecr.ap-northeast-1.amazonaws.com/self_hosted_runner:latest
+        ImagePullCredentialsType: CODEBUILD
+        PrivilegedMode: true
+        EnvironmentVariables: []
+      Source:
+        Type: NO_SOURCE
+        BuildSpec: |
+          version: 0.2
+          phases:
+            install:
+              commands:
+                - nohup dockerd --host=unix:///var/run/docker.sock --host=tcp://127.0.0.1:2375 --storage-driver=overlay2 &
+                - timeout 15s sh -c "until docker info > /dev/null 2>&1; do echo .; sleep 1; done"
+            build:
+              run-as: runner
+              commands:
+                - export HOME=/home/runner
+                - cd /home/runner
+                - timeout --preserve-status 300s ./start-runner.sh
+      Artifacts: { Type: NO_ARTIFACTS }
+      # Cache: { Type: LOCAL, Modes: ["LOCAL_DOCKER_LAYER_CACHE"] }
+      TimeoutInMinutes: 60
+      QueuedTimeoutInMinutes: 5
+      LogsConfig:
+        CloudWatchLogs: { GroupName: !Sub "/codebuild/${Name}", Status: ENABLED }
+      Tags:
+        - { Key: Name, Value: !Sub "${Name}-CodeBuild" }
+        - { Key: Project, Value: !Ref "Name" }
+
+#-------------------------------------------------------------------------------
+# ECR
+#-------------------------------------------------------------------------------
+
+  ECR:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: self_hosted_runner
+      RepositoryPolicyText:
+        Version: 2012-10-17
+        Statement:
+          - Sid: CodeBuildAccessPrincipal
+            Effect: Allow
+            Principal: { Service: codebuild.amazonaws.com }
+            Action:
+              - ecr:GetDownloadUrlForLayer
+              - ecr:BatchGetImage
+              - ecr:BatchCheckLayerAvailability
+      LifecyclePolicy:
+        LifecyclePolicyText: |
+          {
+            "rules": [
+              {
+                "rulePriority": 1,
+                "description": "Only keep untagged images for 3 days",
+                "selection": {
+                  "tagStatus": "untagged",
+                  "countType": "sinceImagePushed",
+                  "countUnit": "days",
+                  "countNumber": 3
+                },
+                "action": { "type": "expire" }
+              }
+            ]
+          }
+      Tags:
+        - { Key: Name, Value: !Sub "${Name}-ECR" }
+        - { Key: Project, Value: !Ref "Name" }
+
+#-------------------------------------------------------------------------------
+# CloudWatch Logs
+#-------------------------------------------------------------------------------
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/codebuild/${Name}"
+      RetentionInDays: 7
+
+Outputs:
+
+  CodeBuildExecutionRoleArn:
+    Description: CodeBuildExecutionRole ARN
+    Value: !GetAtt CodeBuildExecutionRole.Arn
+    Export: { Name: !Sub "${Name}-CodeBuildExecutionRoleArn" }
+
+  GitHubActionsUserArn:
+    Description: GitHubActionsUser ARN
+    Value: !GetAtt GitHubActionsUser.Arn
+    Export: { Name: !Sub "${Name}-GitHubActionsUserArn" }
