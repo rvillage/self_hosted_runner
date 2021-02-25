@@ -48,17 +48,10 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-northeast-1
-      - name: Start SelfHostedRunner
-        env:
-          api_endpoint: https://api.github.com/repos/${{ github.repository }}/actions/runners/registration-token
-        run: |
-          runner_token=$(curl -sX POST -H "Authorization: token ${{ secrets.PERSONAL_ACCESS_TOKEN }}" $api_endpoint | jq -r '.token')
-          aws codebuild start-build \
-            --project-name SelfHostedRunner \
-            --compute-type-override BUILD_GENERAL1_SMALL \
-            --environment-variables-override \
-                name=REPOSITORY_NAME,value=${{ github.repository }},type=PLAINTEXT \
-                name=RUNNER_TOKEN,value=$runner_token,type=PLAINTEXT
+      - uses: rvillage/self_hosted_runner/setup_action@v1-beta
+        with:
+          personal-access-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
   first_job:
     needs: setup
     runs-on: self-hosted
