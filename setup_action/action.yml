@@ -1,0 +1,45 @@
+name: Setup Self-hosted Runner
+description: Setup Self-hosted Runner running on AWS CodeBuild
+
+inputs:
+
+  personal-access-token:
+    description: GitHub Personal access token
+    required: true
+
+  project-name:
+    description: AWS CodeBuild Project Name, Defaults to SelfHostedRunner
+    required: false
+    default: SelfHostedRunner
+
+  compute-type-override:
+    description: AWS CodeBuild Compute Type, Defaults to BUILD_GENERAL1_SMALL
+    required: false
+    default: BUILD_GENERAL1_SMALL
+
+outputs:
+
+  aws-build-id:
+    description: The AWS CodeBuild Build ID
+    value: ${{ steps.start-codebuild.outputs.aws-build-id }}
+
+runs:
+
+  using: composite
+  steps:
+    - name: Start AWS CodeBuild
+      id: start-codebuild
+      env:
+        api_endpoint: https://api.github.com/repos/${{ github.repository }}/actions/runners/registration-token
+      run: |
+        runner_token=$(curl -sX POST -H "Authorization: token ${{ inputs.personal-access-token }}" $api_endpoint | jq -r '.token')
+        build_id=$(aws codebuild start-build \
+          --project-name ${{ inputs.project-name }} \
+          --compute-type-override ${{ inputs.compute-type-override }} \
+          --environment-variables-override \
+              name=REPOSITORY_NAME,value=${{ github.repository }},type=PLAINTEXT \
+              name=RUNNER_TOKEN,value=$runner_token,type=PLAINTEXT \
+          --query 'build.id' \
+          --output text)
+        echo "::set-output name=aws-build-id::$(echo $build_id)"
+      shell: bash
