@@ -75,7 +75,7 @@ Resources:
       Environment:
         Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_SMALL
-        Image: ${AWS::AccountId}.dkr.ecr.ap-northeast-1.amazonaws.com/self_hosted_runner:latest
+        Image: !Sub "${AWS::AccountId}.dkr.ecr.ap-northeast-1.amazonaws.com/self_hosted_runner:latest"
         ImagePullCredentialsType: CODEBUILD
         PrivilegedMode: true
         EnvironmentVariables: []
