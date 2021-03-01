@@ -70,7 +70,7 @@ if [ "$LOCAL_MODE" = "enable" ]; then
 fi
 
 repo_url=https://github.com/$REPOSITORY_NAME
-./actions-runner/config.sh --unattended --url $repo_url --token $RUNNER_TOKEN
+./actions-runner/config.sh --unattended --url $repo_url --token $RUNNER_TOKEN --labels self-hosted,Linux,X64,$ADDITIONAL_LABEL,$GITHUB_RUN_ID
 
 ./actions-runner/run.sh &
 run_sh_pid=$!
