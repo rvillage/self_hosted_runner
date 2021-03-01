@@ -17,10 +17,15 @@ inputs:
     required: false
     default: BUILD_GENERAL1_SMALL
 
+  additional-label:
+    description: Self-hosted Runner additional label, Defaults to runner
+    required: false
+    default: runner
+
 outputs:
 
   aws-build-id:
-    description: The AWS CodeBuild Build ID
+    description: AWS CodeBuild Build ID
     value: ${{ steps.start-codebuild.outputs.aws-build-id }}
 
 runs:
@@ -34,12 +39,34 @@ runs:
       run: |
         runner_token=$(curl -sX POST -H "Authorization: token ${{ inputs.personal-access-token }}" $api_endpoint | jq -r '.token')
         build_id=$(aws codebuild start-build \
-          --project-name ${{ inputs.project-name }} \
-          --compute-type-override ${{ inputs.compute-type-override }} \
-          --environment-variables-override \
-              name=REPOSITORY_NAME,value=${{ github.repository }},type=PLAINTEXT \
-              name=RUNNER_TOKEN,value=$runner_token,type=PLAINTEXT \
-          --query 'build.id' \
-          --output text)
+                     --project-name ${{ inputs.project-name }} \
+                     --compute-type-override ${{ inputs.compute-type-override }} \
+                     --environment-variables-override \
+                         name=REPOSITORY_NAME,value=${{ github.repository }},type=PLAINTEXT \
+                         name=RUNNER_TOKEN,value=$runner_token,type=PLAINTEXT \
+                         name=GITHUB_RUN_ID,value=${{ github.run_id }},type=PLAINTEXT \
+                         name=ADDITIONAL_LABEL,value=${{ inputs.additional-label }},type=PLAINTEXT \
+                     --query 'build.id' \
+                     --output text)
         echo "::set-output name=aws-build-id::$(echo $build_id)"
+      shell: bash
+    - name: Wait AWS CodeBuild
+      run: |
+        retry_count=0
+        while :; do
+          build_parse=$(aws codebuild batch-get-builds \
+                          --ids ${{ steps.start-codebuild.outputs.aws-build-id }} \
+                          --query 'builds[0].currentPhase' \
+                          --output text)
+          if [ "$build_parse" = "BUILD" ]; then
+            sleep 10 # Wait to connect runner
+            break
+          fi
+          if [ $retry_count = 24 ]; then # timeout 2min
+            echo "Timeout wait AWS CodeBuild"
+            exit 1
+          fi
+          retry_count=$((retry_count+1))
+          sleep 5
+        done
       shell: bash

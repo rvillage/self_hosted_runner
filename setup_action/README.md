@@ -9,10 +9,11 @@ This action run a Self-hosted Runner running on AWS CodeBuild.
 1. `personal-access-token` (required) : GitHub Personal access token
 2. `project-name` (optional) : AWS CodeBuild Project Name, Defaults to SelfHostedRunner
 3. `compute-type-override` (optional) : AWS CodeBuild Compute Type, Defaults to BUILD_GENERAL1_SMALL
+4. `additional-label` (optional) : Self-hosted Runner additional label, Defaults to runner
 
 ### Outputs
 
-1. `aws-build-id` : The AWS CodeBuild Build ID
+1. `aws-build-id` : AWS CodeBuild Build ID
 
 ### Example
 
