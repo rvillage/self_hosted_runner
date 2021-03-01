@@ -29,12 +29,7 @@ docker push xxx.dkr.ecr.ap-northeast-1.amazonaws.com/self_hosted_runner:latest
 ```
 3. IAMユーザ`github-actions-user`のアクセスキーをGitHubリポジトリに設定
 4. RunnerToken発行用のPersonal access tokenをGitHubリポジトリに設定
-5. エラー対策でオフラインRunnerを追加しておく
-  - https://github.com/xxx/xxx/settings/actions/add-new-runner にアクセスしてURLとTOKENをメモ
-```sh
-docker run -it --rm local/runner ./actions-runner/config.sh --unattended --name do_not_remove --url URL --token TOKEN
-```
-6. `.github/workflows/test.yml`の作成
+5. `.github/workflows/test.yml`の作成
 ```yml
 name: SelfHostedRunner Test
 on: push
@@ -54,7 +49,7 @@ jobs:
 
   first_job:
     needs: setup
-    runs-on: self-hosted
+    runs-on: [self-hosted, runner, "${{ github.run_id }}"]
     steps:
       - run: echo "Hello SelfHostedRunner!"
 ```
