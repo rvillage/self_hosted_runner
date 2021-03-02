@@ -17,6 +17,38 @@ GitHub Actions Self-hosted Runner running on AWS CodeBuild
 - aws-actions/configure-aws-credentials@v1
 - ruby/setup-ruby@v1
 
+## GitHub Actions
+
+### Inputs
+
+1. `personal-access-token` (required) : GitHub Personal access token
+2. `project-name` (optional) : AWS CodeBuild Project Name, Defaults to SelfHostedRunner
+3. `compute-type-override` (optional) : AWS CodeBuild Compute Type, Defaults to BUILD_GENERAL1_SMALL
+4. `additional-label` (optional) : Self-hosted Runner additional label, Defaults to runner
+
+### Outputs
+
+1. `aws-build-id` : AWS CodeBuild Build ID
+
+### Example
+
+```yaml
+jobs:
+  setup:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-1
+      - uses: rvillage/self_hosted_runner@v1-beta
+        id: setup
+        with:
+          personal-access-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+      - run: echo ${{ steps.setup.outputs.aws-build-id }}
+```
+
 ## Setup
 
 ### AWS
@@ -31,9 +63,6 @@ docker push xxx.dkr.ecr.ap-northeast-1.amazonaws.com/self_hosted_runner:latest
 4. RunnerToken発行用のPersonal access tokenをGitHubリポジトリに設定
 5. `.github/workflows/test.yml`の作成
 ```yml
-name: SelfHostedRunner Test
-on: push
-
 jobs:
   setup:
     runs-on: ubuntu-20.04
@@ -43,7 +72,7 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-northeast-1
-      - uses: rvillage/self_hosted_runner/setup_action@v1-beta
+      - uses: rvillage/self_hosted_runner@v1-beta
         with:
           personal-access-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 
