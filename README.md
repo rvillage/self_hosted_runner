@@ -33,20 +33,17 @@ GitHub Actions Self-hosted Runner running on AWS CodeBuild
 ### Example
 
 ```yaml
-jobs:
-  setup:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-northeast-1
-      - uses: rvillage/self_hosted_runner@v1-beta
-        id: setup
-        with:
-          personal-access-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-      - run: echo ${{ steps.setup.outputs.aws-build-id }}
+steps:
+  - uses: aws-actions/configure-aws-credentials@v1
+    with:
+      aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      aws-region: ap-northeast-1
+  - uses: rvillage/self_hosted_runner@v1-beta
+    id: setup
+    with:
+      personal-access-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+  - run: echo ${{ steps.setup.outputs.aws-build-id }}
 ```
 
 ## Setup
