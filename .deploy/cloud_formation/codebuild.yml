@@ -20,6 +20,8 @@ Resources:
           - Effect: Allow
             Principal: { Service: ["codebuild.amazonaws.com"] }
             Action: ["sts:AssumeRole"]
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser
       Policies:
         - PolicyName: CodeBuildExecutionBasePolicy
           PolicyDocument:
@@ -89,6 +91,10 @@ Resources:
               commands:
                 - nohup dockerd --host=unix:///var/run/docker.sock --host=tcp://127.0.0.1:2375 --storage-driver=overlay2 &
                 - timeout 15s sh -c "until docker info > /dev/null 2>&1; do echo .; sleep 1; done"
+                - credentials=`curl 169.254.170.2$AWS_CONTAINER_CREDENTIALS_RELATIVE_URI`
+                - echo "AWS_ACCESS_KEY_ID=$(echo ${credentials} | jq -r .AccessKeyId)" >> /tmp/.awscli-config
+                - echo "AWS_SECRET_ACCESS_KEY=$(echo ${credentials} | jq -r .SecretAccessKey)" >> /tmp/.awscli-config
+                - echo "AWS_SESSION_TOKEN=$(echo ${credentials} | jq -r .Token)" >> /tmp/.awscli-config
             build:
               run-as: runner
               commands:

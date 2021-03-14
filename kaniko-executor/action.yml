@@ -1,0 +1,48 @@
+name: kaniko executor
+description: Exec gcr.io/kaniko-project/executor for docker build
+
+inputs:
+
+  images:
+    description: Build image names ('name:tag,name:tag' format)
+    required: true
+
+  cache-repo:
+    description: Pushing to docker repository for layer cache
+    required: true
+
+  target:
+    description: Docker build target directory, Defaults to $PWD
+    required: false
+    default: '"$PWD"'
+
+  dockerfile:
+    description: Dockerfile name, Defaults to Dockerfile
+    required: false
+    default: Dockerfile
+
+runs:
+
+  using: composite
+  steps:
+    - name: Pull gcr.io/kaniko-project/executor image
+      run: docker pull -q gcr.io/kaniko-project/executor:latest
+      shell: bash
+    - name: Create config.json for Pushing to Amazon ECR
+      run: echo "{\"credsStore\":\"ecr-login\"}" > /tmp/kaniko_config.json
+      shell: bash
+    - name: kaniko executor
+      run: |
+        IFS=, names=(${{ inputs.images }})
+        for name in ${names[*]}; do destination_options+=("--destination" "$name"); done
+
+        docker run --rm \
+          --env-file /tmp/.awscli-config \
+          -v ${{ inputs.target }}:/workspace \
+          -v /tmp/kaniko_config.json:/kaniko/.docker/config.json \
+          gcr.io/kaniko-project/executor:latest \
+            ${destination_options[*]} \
+            --dockerfile ${{ inputs.dockerfile }} \
+            --cache-repo ${{ inputs.cache-repo }} \
+            --cache=true
+      shell: bash
