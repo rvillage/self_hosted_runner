@@ -59,14 +59,14 @@ runs:
                           --query 'builds[0].currentPhase' \
                           --output text)
           if [ "$build_parse" = "BUILD" ]; then
-            sleep 10 # Wait to connect runner
+            sleep 5 # Wait to connect runner
             break
           fi
-          if [ $retry_count = 24 ]; then # timeout 2min
+          if [ $retry_count = 60 ]; then # timeout 2min
             echo "Timeout wait AWS CodeBuild"
             exit 1
           fi
           retry_count=$((retry_count+1))
-          sleep 5
+          sleep 2
         done
       shell: bash

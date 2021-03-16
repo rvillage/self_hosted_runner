@@ -1,7 +1,13 @@
 #!/bin/bash
 
 cleanup() {
+  if [ "$is_cleanup" = "true" ]; then
+    wait $run_sh_pid
+    break
+  fi
+
   echo "$(date -u +'%Y-%m-%d %TZ') Removing runner..."
+  is_cleanup=true
 
   while :; do
     # job実行中は待つ

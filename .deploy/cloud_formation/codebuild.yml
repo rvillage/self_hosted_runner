@@ -100,7 +100,7 @@ Resources:
               commands:
                 - export HOME=/home/runner
                 - cd /home/runner
-                - timeout --preserve-status 300s ./start-runner.sh
+                - timeout --signal=INT --preserve-status 180s ./start-runner.sh
       Artifacts: { Type: NO_ARTIFACTS }
       # Cache: { Type: LOCAL, Modes: ["LOCAL_DOCKER_LAYER_CACHE"] }
       TimeoutInMinutes: 60
